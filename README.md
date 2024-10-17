@@ -30,6 +30,12 @@ Clone the repository:
 git clone https://github.com/gravitir/automation-windows-quickstart.git
 ```
 
+Switch to the folder:
+
+```bash
+cd automation-windows-quickstart
+```
+
 ### Step 3: Create the vault password
 
 Open the first Secretify link provided to you and log in using the credentials you received (replace `SECRETIFY_USERNAME` with the username you received):
