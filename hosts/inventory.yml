@@ -1,0 +1,4 @@
+windows:
+  hosts:
+    intern_grav_gg:
+      # all vars defined in `vars/enc_vault_windows.yml`

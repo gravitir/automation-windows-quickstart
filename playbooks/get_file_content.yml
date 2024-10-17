@@ -1,0 +1,84 @@
+---
+
+- name: Copy, Decrypt, and Read Encrypted File
+  hosts: windows
+  vars_files:
+    - ../vars/enc_vault_windows.yml
+  vars:
+    username: "{{ lookup('env', 'USER') }}"
+    file: "C:\\Gravitir\\ansible\\{{ username }}.txt.enc"  # The encrypted file on Windows host
+    local_enc_file: "/tmp/{{ username }}.txt.enc"  # Where the encrypted file will be stored on the control machine
+    local_dec_file: "/tmp/{{ username }}.txt"  # Where the decrypted file will be stored on the control machine
+  tasks:
+
+    - name: Check if the file exists on Windows
+      win_stat:
+        path: "{{ file }}"
+      register: file_info
+
+    - name: Copy encrypted file to control machine
+      fetch:
+        src: "{{ file }}"
+        dest: "{{ local_enc_file }}"
+        flat: yes
+      when: file_info.stat.exists
+
+    - name: Check the host running the task
+      debug:
+        msg: "Running on {{ lookup('env', 'HOSTNAME') }}"
+      delegate_to: localhost
+
+    - name: Decrypt the file on control machine
+      shell: "openssl enc -aes-256-cbc -d -in {{ local_enc_file }} -out {{ local_dec_file }} -pass pass:{{ file_enc_password }}"
+      delegate_to: localhost
+      vars:
+        ansible_connection: local
+      become: false
+      when: file_info.stat.exists
+
+    - name: Check if decrypted file exists on control machine
+      stat:
+        path: "{{ local_dec_file }}"
+      register: dec_file_info
+      delegate_to: localhost
+      vars:
+        ansible_connection: local
+      become: false
+      when: file_info.stat.exists
+
+    - name: Read decrypted file content (control machine)
+      command: cat {{ local_dec_file }}
+      register: dec_file_content
+      delegate_to: localhost
+      vars:
+        ansible_connection: local
+      become: false
+      when: dec_file_info.stat.exists
+
+    - name: Print decrypted file content
+      debug:
+        msg: |
+          Decrypted File Content: {{ dec_file_content.stdout }}
+      delegate_to: localhost
+      vars:
+        ansible_connection: local
+      become: false
+      when: dec_file_info.stat.exists
+
+    - name: Remove temporary encrypted file
+      file:
+        path: "{{ local_enc_file }}"
+        state: absent
+      delegate_to: localhost
+      vars:
+        ansible_connection: local
+      become: false
+
+    - name: Remove temporary decrypted file
+      file:
+        path: "{{ local_dec_file }}"
+        state: absent
+      delegate_to: localhost
+      vars:
+        ansible_connection: local
+      become: false
